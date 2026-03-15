@@ -1,0 +1,27 @@
+.venv/
+venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.pyd
+
+# Database files
+*.db
+*.sqlite3
+
+# Flask session and instance folders
+flask_session/
+instance/
+
+# Environment variables
+.env
+
+# macOS system files
+.DS_Store
+
+# Log files
+*.log
