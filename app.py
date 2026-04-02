@@ -49,108 +49,6 @@ def import_csv():
     return render_template("import_csv.html")
 
 
-@app.route("/onboarding", methods=["GET", "POST"])
-def onboarding():
-    user_id = get_current_user_id()
-
-    if not user_id:
-        return redirect("/login")
-    
-    if request.method == "GET":
-        return render_template("onboarding.html")
-
-    con = get_connection()
-
-    try:
-        # If already onboarded, skip
-        if user_has_family_group(con, user_id):
-            return redirect("/")
-
-        if request.method == "GET":
-            token = request.args.get("token", "").strip()
-            return render_template("onboarding.html", token=token)
-
-        action = request.form.get("action", "").strip()
-
-        if action == "create":
-            group_name = request.form.get("group_name", "").strip()
-
-            if not group_name:
-                con.close()
-                return render_template(
-                    "error.html",
-                    message="Please enter a household name."
-                )
-
-            family_group_id = create_family_group(
-                con=con,
-                group_name=group_name,
-                owner_user_id=user_id,
-                seed_defaults=True
-            )
-
-            con.close()
-            return redirect("/")
-
-        elif action == "join":
-            token = request.form.get("invite_token", "").strip()
-
-            if not token:
-                con.close()
-                return render_template(
-                    "error.html",
-                    message="Please enter an invite token."
-                )
-
-            invite = get_invite_by_token(con, token)
-
-            if not invite_is_valid(invite):
-                con.close()
-                return render_template(
-                    "error.html",
-                    message="This invite is invalid, expired, or already used."
-                )
-
-            try:
-                add_user_to_family_group(
-                    con=con,
-                    family_group_id=invite["family_group_id"],
-                    user_id=user_id,
-                    role=invite["role"]
-                )
-            except sqlite3.IntegrityError:
-                con.close()
-                return render_template(
-                    "error.html",
-                    message="You are already a member of this household."
-                )
-
-            mark_invite_as_accepted(
-                con=con,
-                invite_id=invite["id"],
-                user_id=user_id
-            )
-
-            con.close()
-            return redirect("/")
-
-        else:
-            con.close()
-            return render_template(
-                "error.html",
-                message="Invalid onboarding action."
-            )
-
-    except Exception:
-        con.close()
-        return render_template(
-            "error.html",
-            message="Something went wrong during onboarding."
-        )
-
-
-
-
 
 ''' The folowng routes handle login, registeration & logout'''
 @app.route("/login", methods=["GET", "POST"])
@@ -234,6 +132,7 @@ def register():
         con.close()
 
         return redirect("/")
+
     
 ''' The following function are hidden routes the users'''
 @app.route("/upload-csv", methods=["POST"])

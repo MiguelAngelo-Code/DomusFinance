@@ -40,6 +40,11 @@ DEFAULT_ACCOUNTS = [
     ("Main Account", "Manual", "current", "CHF"),
 ]
 
+# -----------------------------
+# Helpers for database queries
+# -----------------------------
+
+
 def connectDataBase(db = DB_FILE):
         # Connects to DB returns dicts
         con = sqlite3.connect(db)
@@ -57,6 +62,7 @@ def get_connection() -> sqlite3.Connection:
     con.execute("PRAGMA foreign_keys = ON;")
     con.row_factory = sqlite3.Row
     return con
+
 
 def get_current_user_id() -> int | None:
     return session.get("user_id")
@@ -474,82 +480,7 @@ def import_ubs_csv(file_storage, user_id: int, requested_account_id: int | None 
 def get_current_user_id():
     return session.get("user_id")
 
-
-def user_has_family_group(con: sqlite3.Connection, user_id: int) -> bool:
-    row = con.execute(
-        """
-        SELECT 1
-        FROM family_group_members
-        WHERE user_id = ?
-        LIMIT 1
-        """,
-        (user_id,)
-    ).fetchone()
-    return row is not None
-
-
-def get_invite_by_token(con: sqlite3.Connection, token: str):
-    return con.execute(
-        """
-        SELECT id, family_group_id, role, expires_at, accepted_at
-        FROM family_group_invites
-        WHERE invite_token = ?
-        LIMIT 1
-        """,
-        (token,)
-    ).fetchone()
-
-
-def invite_is_valid(invite) -> bool:
-    if invite is None:
-        return False
-
-    if invite["accepted_at"] is not None:
-        return False
-
-    if invite["expires_at"]:
-        try:
-            expires_at = datetime.fromisoformat(invite["expires_at"])
-            if datetime.utcnow() > expires_at:
-                return False
-        except ValueError:
-            return False
-
-    return True
-
-
-def add_user_to_family_group(
-    con: sqlite3.Connection,
-    family_group_id: int,
-    user_id: int,
-    role: str
-) -> None:
-    con.execute(
-        """
-        INSERT INTO family_group_members (family_group_id, user_id, role)
-        VALUES (?, ?, ?)
-        """,
-        (family_group_id, user_id, role)
-    )
-    con.commit()
-
-
-def mark_invite_as_accepted(
-    con: sqlite3.Connection,
-    invite_id: int,
-    user_id: int
-) -> None:
-    con.execute(
-        """
-        UPDATE family_group_invites
-        SET accepted_at = CURRENT_TIMESTAMP,
-            accepted_by_user_id = ?
-        WHERE id = ?
-        """,
-        (user_id, invite_id)
-    )
-    con.commit()
-
+# Todo: needs edditing to bring to new databsde
 
 def seed_default_categories_for_group(con: sqlite3.Connection, family_group_id: int) -> None:
     cur = con.cursor()
@@ -564,6 +495,7 @@ def seed_default_categories_for_group(con: sqlite3.Connection, family_group_id: 
     con.commit()
 
 
+# Todo: needs edditing to bring to new databsde
 def seed_default_accounts_for_group(con: sqlite3.Connection, family_group_id: int) -> None:
     cur = con.cursor()
     for name, institution, account_type, currency in DEFAULT_ACCOUNTS:
@@ -581,37 +513,3 @@ def seed_default_accounts_for_group(con: sqlite3.Connection, family_group_id: in
             (family_group_id, name, institution, account_type, currency),
         )
     con.commit()
-
-
-def create_family_group(
-    con: sqlite3.Connection,
-    group_name: str,
-    owner_user_id: int,
-    seed_defaults: bool = True
-) -> int:
-    cur = con.cursor()
-
-    cur.execute(
-        """
-        INSERT INTO family_groups (name, created_by_user_id)
-        VALUES (?, ?)
-        """,
-        (group_name, owner_user_id),
-    )
-    family_group_id = cur.lastrowid
-
-    cur.execute(
-        """
-        INSERT INTO family_group_members (family_group_id, user_id, role)
-        VALUES (?, ?, 'owner')
-        """,
-        (family_group_id, owner_user_id),
-    )
-
-    con.commit()
-
-    if seed_defaults:
-        seed_default_categories_for_group(con, family_group_id)
-        seed_default_accounts_for_group(con, family_group_id)
-
-    return family_group_id

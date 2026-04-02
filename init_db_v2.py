@@ -1,34 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-DB_FILE = "finance.db"
-
-DEFAULT_CATEGORIES = [
-    "Groceries",
-    "Dining",
-    "Shopping",
-    "Transport",
-    "Utilities",
-    "Insurance",
-    "Pharmacy",
-    "Salary",
-    "Cash Withdrawal",
-    "Transfers",
-    "Entertainment",
-    "Healthcare",
-    "Education",
-    "Children",
-    "Pets",
-    "Travel",
-    "Rent",
-    "Mortgage",
-    "Savings",
-    "Uncategorized",
-]
-
-DEFAULT_ACCOUNTS = [
-    ("Main Account", "Manual", "current", "CHF"),
-]
+DB_FILE = "NostraFinance.db"
 
 SCHEMA = """
 PRAGMA foreign_keys = ON;
