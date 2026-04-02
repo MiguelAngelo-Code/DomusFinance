@@ -1,0 +1,13 @@
+<form action="/upload-csv" method="post" enctype="multipart/form-data">
+    <input type="file" name="csv_file" accept=".csv" required>
+
+    <!-- Optional account picker -->
+    <select name="account_id">
+        <option value="">Use default account</option>
+        {% for account in accounts %}
+            <option value="{{ account.id }}">{{ account.name }}</option>
+        {% endfor %}
+    </select>
+
+    <button type="submit">Upload CSV</button>
+</form>

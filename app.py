@@ -5,7 +5,7 @@ from datetime import datetime, date
 from decimal import Decimal, ROUND_HALF_UP
 from flask import Flask, flash, redirect, render_template, Response, request, session
 from flask_session import Session
-from helpers import connectDataBase
+from helpers import connectDataBase, get_current_user_id, get_connection, import_ubs_csv, url_for, user_has_family_group, get_invite_by_token, invite_is_valid, add_user_to_family_group, mark_invite_as_accepted, create_family_group
 import sqlite3
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -39,6 +39,118 @@ def index():
         return redirect("/login")
     
     return render_template("index.html")
+
+
+@app.route("/import")
+def import_csv():
+    if ("user_id" not in session):
+        return redirect("/login")
+    
+    return render_template("import_csv.html")
+
+
+@app.route("/onboarding", methods=["GET", "POST"])
+def onboarding():
+    user_id = get_current_user_id()
+
+    if not user_id:
+        return redirect("/login")
+    
+    if request.method == "GET":
+        return render_template("onboarding.html")
+
+    con = get_connection()
+
+    try:
+        # If already onboarded, skip
+        if user_has_family_group(con, user_id):
+            return redirect("/")
+
+        if request.method == "GET":
+            token = request.args.get("token", "").strip()
+            return render_template("onboarding.html", token=token)
+
+        action = request.form.get("action", "").strip()
+
+        if action == "create":
+            group_name = request.form.get("group_name", "").strip()
+
+            if not group_name:
+                con.close()
+                return render_template(
+                    "error.html",
+                    message="Please enter a household name."
+                )
+
+            family_group_id = create_family_group(
+                con=con,
+                group_name=group_name,
+                owner_user_id=user_id,
+                seed_defaults=True
+            )
+
+            con.close()
+            return redirect("/")
+
+        elif action == "join":
+            token = request.form.get("invite_token", "").strip()
+
+            if not token:
+                con.close()
+                return render_template(
+                    "error.html",
+                    message="Please enter an invite token."
+                )
+
+            invite = get_invite_by_token(con, token)
+
+            if not invite_is_valid(invite):
+                con.close()
+                return render_template(
+                    "error.html",
+                    message="This invite is invalid, expired, or already used."
+                )
+
+            try:
+                add_user_to_family_group(
+                    con=con,
+                    family_group_id=invite["family_group_id"],
+                    user_id=user_id,
+                    role=invite["role"]
+                )
+            except sqlite3.IntegrityError:
+                con.close()
+                return render_template(
+                    "error.html",
+                    message="You are already a member of this household."
+                )
+
+            mark_invite_as_accepted(
+                con=con,
+                invite_id=invite["id"],
+                user_id=user_id
+            )
+
+            con.close()
+            return redirect("/")
+
+        else:
+            con.close()
+            return render_template(
+                "error.html",
+                message="Invalid onboarding action."
+            )
+
+    except Exception:
+        con.close()
+        return render_template(
+            "error.html",
+            message="Something went wrong during onboarding."
+        )
+
+
+
+
 
 ''' The folowng routes handle login, registeration & logout'''
 @app.route("/login", methods=["GET", "POST"])
@@ -122,3 +234,49 @@ def register():
         con.close()
 
         return redirect("/")
+    
+''' The following function are hidden routes the users'''
+@app.route("/upload-csv", methods=["POST"])
+def upload_csv():
+    user_id = get_current_user_id()
+    if not user_id:
+        return redirect("/login")
+
+    file = request.files.get("csv_file")
+    if file is None or file.filename == "":
+        return render_template("error.html", message="Please choose a CSV file.")
+
+    if not file.filename.lower().endswith(".csv"):
+        return render_template("error.html", message="Please upload a CSV file.")
+
+    # Optional: pass an account_id from a form select input
+    account_id_raw = request.form.get("account_id")
+    requested_account_id = None
+
+    if account_id_raw:
+        try:
+            requested_account_id = int(account_id_raw)
+        except ValueError:
+            return render_template("error.html", message="Invalid account selected.")
+
+    try:
+        result = import_ubs_csv(
+            file_storage=file,
+            user_id=user_id,
+            requested_account_id=requested_account_id,
+        )
+    except ValueError as e:
+        return render_template("error.html", message=str(e))
+    except sqlite3.Error:
+        return render_template("error.html", message="Database error while importing CSV.")
+    except Exception:
+        return render_template("error.html", message="Could not import that CSV file.")
+
+    return redirect(
+        url_for(
+            "transactions",
+            imported=result["inserted"],
+            skipped=result["skipped"],
+            batch=result["import_batch_id"],
+        )
+    )

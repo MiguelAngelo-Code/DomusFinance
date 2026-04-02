@@ -1,0 +1,19 @@
+<h1>Set up your account</h1>
+
+<h2>Create your own household</h2>
+<form action="/onboarding" method="post">
+    <input type="hidden" name="action" value="create">
+    <label for="group_name">Household name</label>
+    <input type="text" name="group_name" id="group_name" placeholder="My Household" required>
+    <button type="submit">Create household</button>
+</form>
+
+<hr>
+
+<h2>Join an existing household</h2>
+<form action="/onboarding" method="post">
+    <input type="hidden" name="action" value="join">
+    <label for="invite_token">Invite token</label>
+    <input type="text" name="invite_token" id="invite_token" value="{{ token or '' }}" required>
+    <button type="submit">Join household</button>
+</form>
