@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL COLLATE NOCASE,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (user_id, name),
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE TABLE IF NOT EXISTS merchants (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    canonical_name TEXT NOT NULL,
+    canonical_name TEXT NOT NULL COLLATE NOCASE,
     default_category_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     raw_description_2 TEXT,
     raw_description_3 TEXT,
 
-    normalized_alias TEXT,
+    normalized_alias TEXT COLLATE NOCASE,
 
     merchant_id INTEGER,
     merchant_source TEXT NOT NULL DEFAULT 'unknown'

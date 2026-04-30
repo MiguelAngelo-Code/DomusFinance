@@ -5,7 +5,7 @@ from datetime import datetime, date
 from decimal import Decimal, ROUND_HALF_UP
 from flask import Flask, flash, redirect, render_template, Response, request, session
 from flask_session import Session
-from helpers import connectDataBase, get_current_user_id, get_connection, import_ubs_csv, url_for, user_has_family_group, get_invite_by_token, invite_is_valid, add_user_to_family_group, mark_invite_as_accepted, create_family_group
+from helpers import connectDataBase, get_current_user_id, url_for
 import sqlite3
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -31,7 +31,11 @@ def after_request(response):
     return response
 
 
-''' The Folowing rotes are for user accesible pages '''
+# -------------------------------
+# Main pages for user navigation
+# -------------------------------
+
+
 @app.route("/")
 def index():
     # Checks user is loged in
@@ -41,16 +45,11 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/import")
-def import_csv():
-    if ("user_id" not in session):
-        return redirect("/login")
-    
-    return render_template("import_csv.html")
+# -----------------------------
+# Login, Logout & Registration
+# -----------------------------
 
 
-
-''' The folowng routes handle login, registeration & logout'''
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if (request.method == "GET"):
@@ -97,8 +96,11 @@ def register():
         return render_template("register.html")
     
     else:
+        
+        # Validates user inputs, inserts into DB if correct and logs user in
+        # -------------------------------------------------------------------
 
-        ''' Code black validates user inputs, inserts into DB if correct and logs user in.'''
+
         session.clear()
 
         username = request.form.get("username").strip()
@@ -112,7 +114,7 @@ def register():
             return render_template("error.html", message="Passwords do not match")
         
 
-        # Insert user into database
+        # Insert user into database & logged in
         con = connectDataBase()
         cur = con.cursor()
 
@@ -126,15 +128,28 @@ def register():
             return render_template("error.html", message="SQL constraint failed likley due to unique check on email")
             
 
-        # Login user, close connection & redirects Home
+        # Login user, close connection & redirects to onboarding
         session["user_id"] = cur.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()["id"]
+
+        
+
+
 
         con.close()
 
-        return redirect("/")
+        return redirect("/onboarding")
 
-    
-''' The following function are hidden routes the users'''
+
+@app.route("/onboarding", methods=["GET", "POST"])
+def onboarding():
+    if request.method == "GET"
+
+
+# -----------------------------
+# CSV Imports
+# -----------------------------
+
+
 @app.route("/upload-csv", methods=["POST"])
 def upload_csv():
     user_id = get_current_user_id()
@@ -179,3 +194,11 @@ def upload_csv():
             batch=result["import_batch_id"],
         )
     )
+
+
+@app.route("/import")
+def import_csv():
+    if ("user_id" not in session):
+        return redirect("/login")
+    
+    return render_template("import_csv.html")

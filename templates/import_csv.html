@@ -1,13 +1,20 @@
-<form action="/upload-csv" method="post" enctype="multipart/form-data">
-    <input type="file" name="csv_file" accept=".csv" required>
 
-    <!-- Optional account picker -->
-    <select name="account_id">
-        <option value="">Use default account</option>
-        {% for account in accounts %}
-            <option value="{{ account.id }}">{{ account.name }}</option>
-        {% endfor %}
-    </select>
+{% extends "layout.html" %}
 
-    <button type="submit">Upload CSV</button>
-</form>
+{% block title %}Import CSV{% endblock %}
+
+{% block main %}
+    <form action="/upload-csv" method="post" enctype="multipart/form-data">
+        <input type="file" name="csv_file" accept=".csv" required>
+
+        <!-- Optional account picker -->
+        <select name="account_id">
+            <option value="">Use default account</option>
+            {% for account in accounts %}
+                <option value="{{ account.id }}">{{ account.name }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Upload CSV</button>
+    </form>
+{% endblock %}
